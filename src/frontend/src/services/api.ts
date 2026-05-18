@@ -83,7 +83,7 @@ export async function deleteTask(id: number): Promise<void> {
 }
 
 export async function searchTasks(query: string): Promise<TaskItem[]> {
-  const response = await fetch(`${API_BASE}/tasks/search?q=${query}`);
+  const response = await fetch(`${API_BASE}/tasks/search?q=${encodeURIComponent(query)}`);
   return response.json();
 }
 

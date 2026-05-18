@@ -62,7 +62,7 @@ export function Comments({ taskId }: CommentsProps) {
               <button onClick={() => handleDelete(c.id)} style={{ background: "none", border: "none", color: "red", cursor: "pointer", fontSize: 11 }}>delete</button>
             </span>
           </div>
-          <div dangerouslySetInnerHTML={{ __html: c.content }} />
+          <p style={{ margin: "4px 0 0", whiteSpace: "pre-wrap" }}>{c.content}</p>
         </div>
       ))}
 
