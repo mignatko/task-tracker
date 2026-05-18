@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
+import { SearchBar } from "./components/SearchBar";
+import { StatsPanel } from "./components/StatsPanel";
 import { TaskItem, CreateTaskRequest, getTasks, createTask, updateTask, deleteTask } from "./services/api";
 
 function App() {
@@ -9,8 +11,9 @@ function App() {
   const [filterPriority, setFilterPriority] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchActive, setSearchActive] = useState(false);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getTasks(filterStatus || undefined, filterPriority || undefined);
@@ -21,11 +24,11 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, filterPriority]);
 
   useEffect(() => {
     loadTasks();
-  }, [filterStatus, filterPriority]);
+  }, [loadTasks]);
 
   const handleCreate = async (request: CreateTaskRequest) => {
     try {
@@ -58,16 +61,29 @@ function App() {
     <div style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
       <h1>Task Tracker</h1>
 
+      <StatsPanel />
+
+      <SearchBar
+        onResults={(results) => {
+          setTasks(results);
+          setSearchActive(true);
+        }}
+        onClear={() => {
+          setSearchActive(false);
+          loadTasks();
+        }}
+      />
+
       <TaskForm onSubmit={handleCreate} />
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: 8 }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, opacity: searchActive ? 0.5 : 1 }}>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} disabled={searchActive} style={{ padding: 8 }}>
           <option value="">All Statuses</option>
           <option value="Todo">Todo</option>
           <option value="InProgress">In Progress</option>
           <option value="Done">Done</option>
         </select>
-        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={{ padding: 8 }}>
+        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} disabled={searchActive} style={{ padding: 8 }}>
           <option value="">All Priorities</option>
           <option value="Low">Low</option>
           <option value="Medium">Medium</option>
