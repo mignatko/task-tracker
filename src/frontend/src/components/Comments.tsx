@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Comment, getComments, addComment, deleteComment } from "../services/api";
 
 interface CommentsProps {
@@ -11,16 +11,16 @@ export function Comments({ taskId }: CommentsProps) {
   const [content, setContent] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
+  const loadComments = useCallback(async () => {
+    const data = await getComments(taskId);
+    setComments(data);
+  }, [taskId]);
+
   useEffect(() => {
     if (isOpen) {
       loadComments();
     }
-  }, [isOpen]);
-
-  const loadComments = async () => {
-    const data = await getComments(taskId);
-    setComments(data);
-  };
+  }, [isOpen, loadComments]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
