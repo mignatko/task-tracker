@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { TaskForm } from "./components/TaskForm";
 import { TaskList } from "./components/TaskList";
+import { SearchBar } from "./components/SearchBar";
+import { StatsPanel } from "./components/StatsPanel";
 import { TaskItem, CreateTaskRequest, getTasks, createTask, updateTask, deleteTask } from "./services/api";
 
 function App() {
@@ -9,6 +11,7 @@ function App() {
   const [filterPriority, setFilterPriority] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const loadTasks = async () => {
     try {
@@ -57,6 +60,19 @@ function App() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
       <h1>Task Tracker</h1>
+
+      <StatsPanel />
+
+      <SearchBar
+        onResults={(results) => {
+          setTasks(results);
+          setIsSearchMode(true);
+        }}
+        onClear={() => {
+          setIsSearchMode(false);
+          loadTasks();
+        }}
+      />
 
       <TaskForm onSubmit={handleCreate} />
 

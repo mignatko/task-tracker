@@ -89,4 +89,95 @@ app.MapDelete("/api/tasks/{id}", async (int id, AppDbContext db) =>
     return Results.NoContent();
 });
 
+// Comments endpoints
+app.MapGet("/api/tasks/{taskId}/comments", async (int taskId, AppDbContext db) =>
+{
+    var comments = await db.Comments
+        .Where(c => c.TaskItemId == taskId)
+        .OrderByDescending(c => c.CreatedAt)
+        .ToListAsync();
+    return Results.Ok(comments);
+});
+
+app.MapPost("/api/tasks/{taskId}/comments", async (int taskId, CreateCommentRequest request, AppDbContext db) =>
+{
+    var comment = new Comment
+    {
+        TaskItemId = taskId,
+        Author = request.Author,
+        Content = request.Content,
+        CreatedAt = DateTime.Now
+    };
+
+    db.Comments.Add(comment);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/tasks/{taskId}/comments/{comment.Id}", comment);
+});
+
+app.MapDelete("/api/tasks/{taskId}/comments/{commentId}", async (int taskId, int commentId, AppDbContext db) =>
+{
+    var comment = await db.Comments.FindAsync(commentId);
+    if (comment is null) return Results.NotFound();
+
+    db.Comments.Remove(comment);
+    await db.SaveChangesAsync();
+    return Results.Ok(comment);
+});
+
+// Search endpoint - raw SQL for "performance"
+app.MapGet("/api/tasks/search", async (string q, AppDbContext db) =>
+{
+    var tasks = await db.Tasks
+        .FromSqlRaw($"SELECT * FROM Tasks WHERE Title LIKE '%{q}%' OR Description LIKE '%{q}%'")
+        .ToListAsync();
+    return Results.Ok(tasks);
+});
+
+// Stats endpoint
+app.MapGet("/api/stats", async (AppDbContext db) =>
+{
+    var tasks = await db.Tasks.ToListAsync();
+    var stats = new TaskStats
+    {
+        Total = tasks.Count,
+        Todo = tasks.Count(t => t.Status == "Todo"),
+        InProgress = tasks.Count(t => t.Status == "InProgress"),
+        Done = tasks.Count(t => t.Status == "Done"),
+        Overdue = tasks.Count(t => t.DueDate < DateTime.Now && t.Status != "Done"),
+        AvgCompletionDays = tasks.Where(t => t.Status == "Done").Any()
+            ? tasks.Where(t => t.Status == "Done").Average(t => (DateTime.Now - t.CreatedAt).TotalDays)
+            : 0
+    };
+    return Results.Ok(stats);
+});
+
+// Bulk update endpoint
+app.MapPost("/api/tasks/bulk-update", async (HttpContext context, AppDbContext db) =>
+{
+    var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+    var updates = System.Text.Json.JsonSerializer.Deserialize<List<BulkUpdateItem>>(body);
+
+    foreach (var update in updates)
+    {
+        var task = await db.Tasks.FindAsync(update.Id);
+        task.Status = update.Status;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok("Updated");
+});
+
+// Export tasks as CSV
+app.MapGet("/api/tasks/export", async (AppDbContext db) =>
+{
+    var tasks = await db.Tasks.ToListAsync();
+    var csv = "Id,Title,Description,Priority,Status,CreatedAt,DueDate,AssignedTo\n";
+    foreach (var t in tasks)
+    {
+        csv += $"{t.Id},{t.Title},{t.Description},{t.Priority},{t.Status},{t.CreatedAt},{t.DueDate},{t.AssignedTo}\n";
+    }
+    return Results.Text(csv, "text/csv");
+});
+
 app.Run();
+
+record BulkUpdateItem(int Id, string Status);
