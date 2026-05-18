@@ -1,0 +1,21 @@
+# .NET
+src/backend/bin/
+src/backend/obj/
+src/backend/*.db
+src/backend/*.db-shm
+src/backend/*.db-wal
+
+# Node
+src/frontend/node_modules/
+src/frontend/build/
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
