@@ -124,11 +124,12 @@ app.MapDelete("/api/tasks/{taskId}/comments/{commentId}", async (int taskId, int
     return Results.Ok(comment);
 });
 
-// Search endpoint - raw SQL for "performance"
 app.MapGet("/api/tasks/search", async (string q, AppDbContext db) =>
 {
+    var pattern = $"%{q}%";
     var tasks = await db.Tasks
-        .FromSqlRaw($"SELECT * FROM Tasks WHERE Title LIKE '%{q}%' OR Description LIKE '%{q}%'")
+        .Where(t => EF.Functions.Like(t.Title, pattern) ||
+                     (t.Description != null && EF.Functions.Like(t.Description, pattern)))
         .ToListAsync();
     return Results.Ok(tasks);
 });
@@ -157,9 +158,13 @@ app.MapPost("/api/tasks/bulk-update", async (HttpContext context, AppDbContext d
     var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
     var updates = System.Text.Json.JsonSerializer.Deserialize<List<BulkUpdateItem>>(body);
 
+    if (updates is null)
+        return Results.BadRequest("Invalid request body");
+
     foreach (var update in updates)
     {
         var task = await db.Tasks.FindAsync(update.Id);
+        if (task is null) continue;
         task.Status = update.Status;
     }
     await db.SaveChangesAsync();
